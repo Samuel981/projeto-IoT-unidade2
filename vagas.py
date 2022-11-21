@@ -1,5 +1,5 @@
 # USAGE
-# python vagas.py -v video [-i imagem]  [-c cadastro]
+# python vagas.py -v video [-s nome_do_setor] [-c 0 ou 1]
 
 import argparse
 import time
@@ -10,28 +10,15 @@ import os
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", help="path to input video")
+ap.add_argument("-s", "--setor", help="informa o nome do setor")
 ap.add_argument("-c", "--cadastro", type=int, default=0,
                 help="[0] - monitoramento das vagas | [1] - cadastra novo setor")
-# ap.add_argument("-s", "--selecao", type=int, default=0, help="[0] - selecao automatica | [1] - selecao manual")
 args = vars(ap.parse_args())
 
 
-def cadastrar():
-    # Leitura do primeiro frame da camera para identificacao das posicoes das vagas
-    image = None
-    camera = cv2.VideoCapture(args["video"])
-    if args.get("video", None) is not None:
-        camera = cv2.VideoCapture(args["video"])
-        (grabbed, frame) = camera.read()
-        if not grabbed:
-            print("Impossível proseguir com o cadastro! - Erro na leitura do vídeo!")
-            exit(0)
-        image = frame
-    else:
-        print("Erro na leitura de arquivo! (Vídeo não encontrado)")
-        exit(0)
-    # cv2.imshow("Image", image)
-
+def automatica(image):
+    header()
+    print("[Cadastrando vagas de modo semiautomático]")
     # Identificacao automatica
     # Select ROI
     roi = cv2.selectROI("Selecione a ROI", image, False)
@@ -62,25 +49,123 @@ def cadastrar():
 
     # loop dos contornos
     vagas = 0
+    coordenadas = None
     for contorno in contornos:
         # desenha retangulos nas multiplas areas de interesse encontradas
         if cv2.contourArea(contorno) > 1800:
             x, y, w, h = cv2.boundingRect(contorno)
             vagas += 1
-            cv2.rectangle(output, (x+20, y), (x+w-20, y+h), (255, 0, 0), 2)
+            # cv2.rectangle(output, (x+20, y), (x+w-20, y+h), (255, 0, 0), 2)
             cv2.rectangle(outputImg, (x+20+xInicial, y+yInicial),
                           (x+w-20+xInicial, y+h+yInicial), (255, 0, 0), 2)
+            armazenado = ''
+            if coordenadas is not None:
+                armazenado = str(coordenadas)
+            coordenadas = armazenado + \
+                str(x+20+xInicial)+':'+str(+yInicial) + ':' + \
+                str(x+w-20+xInicial)+':'+str(y+h+yInicial)+':'
 
     # cv2.imshow("Contours", output)
     cv2.destroyWindow("Selecione a ROI")
     cv2.imshow("Vagas encontradas", outputImg)
-    cv2.waitKey(0)
+
+    return coordenadas
 
 
-def main():
+def manual(image, armazenado):
+    header()
+    print("[Cadastrando vagas de modo manual]")
+    coordenadas = None
+    # if coordenadas is not None:
+    roi = cv2.selectROI("Selecione a ROI", image, False)
+
+    xInicial = roi[0]
+    yInicial = roi[1]
+    altura = roi[3]
+    largura = roi[2]
+
+    cv2.rectangle(image, (xInicial, yInicial),
+                  (xInicial+largura, yInicial+altura), (255, 0, 0), 2)
+
+    if armazenado is not None:
+        armazenado = str(armazenado)
+    coordenadas = armazenado + str(xInicial)+':'+str(yInicial) + \
+        ':'+str(xInicial+largura)+':'+str(yInicial+altura)+':'
+    cv2.imshow("Selecione a ROI", image)
+    print(
+        "Pressione\n[ESPAÇO] para para adicionar mais uma vaga\n[ENTER] para avançar")
+    key = cv2.waitKey(0)
+    if key == 32:
+        coordenadas = manual(image, coordenadas)
+    else:
+        print(coordenadas)
+    return str(coordenadas)
+
+
+def cadastrar():
+    header()
+    print(
+        "Pressione\n[A] para fazer o cadastro do modo semiautomático\n[M] para fazer o cadastro manualmente")
+
+    # Leitura do primeiro frame da camera para identificacao das posicoes das vagas
+    image = None
+    camera = cv2.VideoCapture(args["video"])
+    if args.get("video", None) is not None:
+        camera = cv2.VideoCapture(args["video"])
+        (grabbed, frame) = camera.read()
+        if not grabbed:
+            print("Impossível proseguir com o cadastro! - Erro na leitura do vídeo!")
+            exit(0)
+        image = frame
+    else:
+        print("Erro na leitura de arquivo! (Vídeo não encontrado)")
+        exit(0)
+
+    msg = "Escolher modo de identificacao"
+    cv2.imshow(msg, image)
+    key = cv2.waitKey(0)
+    coordenadas = None
+    cv2.destroyWindow(msg)
+    if key == 97 or key == 65:  # letra A = identificacao automatica
+        coordenadas = automatica(image)
+    elif key == 109 or key == 77:   # letra M = identificacao manual
+        coord = ''
+        coordenadas = manual(image, coord)
+    else:
+        exit(0)
+
+    header()
+    print(
+        "Pressione\n[ENTER] para confirmar cadastro de "+args["setor"]+"\n[R] para refazer o cadastro")
+    key = cv2.waitKey(0)
+    if key == 32 or key == 13:  # espaco ou enter insere dados no arquivo
+        linhas = 0
+        try:
+            file = open('setores.txt', 'r')
+            linhas = sum(1 for l in file)
+            file.close()
+        except:
+            pass
+
+        with open('setores.txt', 'a+') as file:
+            id = linhas+1
+            file.write(str(id)+';'+args["video"]+';' +
+                       args["setor"]+';'+str(coordenadas)+'\n')
+    elif key == 114 or key == 82:   # letra R repete identificacao automatica
+        cv2.destroyWindow("Vagas encontradas")
+        cadastrar()
+    else:
+        exit(0)
+
+
+def header():
     os.system('cls')
     print("--------------- TEM VAGA ALI! ---------------")
     print("----- Sistema de monitoramento de vagas -----\n")
+
+
+def main():
+    header()
     if (args["cadastro"] == 1):
         print("[1] - Cadastre um novo setor")
         cadastrar()
