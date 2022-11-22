@@ -6,6 +6,7 @@ import imutils  # type: ignore
 import cv2  # type: ignore
 import numpy as np  # type: ignore
 import os
+import math
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", help="path to input video")
@@ -176,6 +177,10 @@ def listar(string, char1, char2):
     return lista
 
 
+def grid(lista):
+    return cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in lista])
+
+
 def monitorar():
     setores = []
     try:
@@ -209,6 +214,7 @@ def monitorar():
 
     camerasAtivas = len(setores)
     while True:
+        saida = []
         for set in setores:
             (set['grabbed'], set['frame']) = set['camera'].read()
             if set['grabbed'] and set['estado']:
@@ -227,7 +233,7 @@ def monitorar():
 
                 height = camera.shape[0]
                 width = camera.shape[1]
-                cv2.rectangle(camera, (0, 0),
+                cv2.rectangle(camera, (-2, -2),
                               (width-1, height-1), (0, 0, 0), 2)
                 for x, y, w, h in set['coordenadas']:
                     area = dilatada[y:h, x:w]
@@ -241,7 +247,8 @@ def monitorar():
                         cv2.rectangle(camera, (x, y), (w, h), (0, 255, 0), 2)
 
                 titulo = "#"+set['id']+" - "+set['nomeSetor']
-                cv2.imshow(titulo, camera)
+                # cv2.imshow(titulo, camera)
+                saida.append(camera)
             else:
                 if set['estado']:
                     set['estado'] = False
@@ -253,6 +260,29 @@ def monitorar():
                               " - "+set['nomeSetor']+" encerrado")
                     if camerasAtivas == 0:
                         print("Nenhuma câmera ativa!")
+
+        if camerasAtivas > 0:
+            if camerasAtivas == 1:
+                out = saida[0]
+            if camerasAtivas <= 4:
+                # cria uma tela em branco e preenche espaços vazios com ela
+                bg = np.zeros((720, 1280, 3), dtype="uint8")
+                bg[:] = (180, 180, 180)
+                while len(saida) < 4:
+                    saida.append(bg)
+
+                listaSaida = []
+                f = 0
+                l = 2
+                for j in range(0, 2):
+                    listaSaida.append(saida[f:l])
+                    f += 2
+                    l += 2
+                out = grid(listaSaida)
+
+            # tela inteira exibindo todas as cameras ativas
+            out = cv2.resize(out, (1920, 1080))
+            cv2.imshow("Monitoramento", out)
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q") or key == 27:  # q (quit) encerra
