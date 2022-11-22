@@ -2,7 +2,6 @@
 # python vagas.py -v video [-s nome_do_setor] [-c 0 ou 1]
 
 import argparse
-import time
 import imutils  # type: ignore
 import cv2  # type: ignore
 import numpy as np  # type: ignore
@@ -178,69 +177,91 @@ def listar(string, char1, char2):
 
 
 def monitorar():
-    # try:
-    file = open('setores.txt', 'r+')
-    for l in file:
-        id = l.split(';')[0]
-        camera = l.split(';')[1]
-        setor = l.split(';')[2]
-        coordenadas = l.split(';')[3]
-        coordenadas = coordenadas[0:len(coordenadas)-2]
-        coordenadas = listar(coordenadas, ':', ',')
-        # print(id)
-        # print(camera)
-        # print(setor)
-        # print(coordenadas)
+    setores = []
+    try:
+        file = open('setores.txt', 'r+')
+        for l in file:
+            setor = {}
+            setor['id'] = l.split(';')[0]
+            setor['camera'] = cv2.VideoCapture(l.split(';')[1])
+            setor['nomeSetor'] = l.split(';')[2]
+            coordenadas = l.split(';')[3]
+            coordenadas = coordenadas[0:len(coordenadas)-2]
+            setor['coordenadas'] = listar(coordenadas, ':', ',')
+            setor['grabbed'] = True
+            setor['frame'] = None
+            setor['frames'] = False
+            setor['estado'] = True
+            setores.append(setor)
+            # print(setor['id'])
+            # print(setor['camera'])
+            # print(setor['nomeSetor'])
+            # print(setor['coordenadas'])
 
-        # camera = cv2.VideoCapture(camera)
-        # if camera is not None:
-        #     (grabbed, frame) = camera.read()
-        #     if not grabbed:
-        #         print("Impossível proseguir com o cadastro! - Erro na leitura do vídeo!")
-        #         exit(0)
-        #     image = frame
+            # Estados
+            # T - monitorando
+            # F = video nao encontrado/encerrado
+        file.close()
+    except:
+        pass
+        print("Arquivo nao encontrado!")
+        exit(0)
 
-        camera = cv2.imread('vagas2.png')
-        camera = cv2.resize(camera, (1280, 720))
-        gray = cv2.cvtColor(camera, cv2.COLOR_BGR2GRAY)
-        # ret, thresh = cv2.threshold(gray, 30, 20, cv2.THRESH_BINARY_INV)
+    camerasAtivas = len(setores)
+    while True:
+        for set in setores:
+            (set['grabbed'], set['frame']) = set['camera'].read()
+            if set['grabbed'] and set['estado']:
+                set['frames'] = True
+                camera = cv2.resize(set['frame'], (1280, 720))
+                gray = cv2.cvtColor(camera, cv2.COLOR_BGR2GRAY)
 
-        ########################### AJUSTAR VALORES ###########################
-        thresh = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 16)
-        ########################### AJUSTAR VALORES ###########################
+                ########################### AJUSTAR VALORES ###########################
+                thresh = cv2.adaptiveThreshold(
+                    gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 16)
+                ########################### AJUSTAR VALORES ###########################
 
-        blur = cv2.medianBlur(thresh, 5)
-        kernel = np.ones((3, 3), np.int8)
-        dilatada = cv2.dilate(blur, kernel)
+                blur = cv2.medianBlur(thresh, 5)
+                kernel = np.ones((3, 3), np.int8)
+                dilatada = cv2.dilate(blur, kernel)
 
-        vaga = len(coordenadas)
-        for x, y, w, h in coordenadas:
-            area = dilatada[y:h, x:w]
-            pixelsBranco = cv2.countNonZero(area)
+                height = camera.shape[0]
+                width = camera.shape[1]
+                cv2.rectangle(camera, (0, 0),
+                              (width-1, height-1), (0, 0, 0), 2)
+                for x, y, w, h in set['coordenadas']:
+                    area = dilatada[y:h, x:w]
+                    pixelsBranco = cv2.countNonZero(area)
 
-            cv2.imwrite('images/vaga'+str(vaga)+".jpg", area)
-            vaga -= 1
-            if pixelsBranco > 3000:
-                cv2.rectangle(camera, (x, y), (w, h), (0, 0, 255), 2)
+                    if pixelsBranco > 3000:
+                        # VAGA OCUPADA
+                        cv2.rectangle(camera, (x, y), (w, h), (0, 0, 255), 2)
+                    else:
+                        # VAGA LIVRE
+                        cv2.rectangle(camera, (x, y), (w, h), (0, 255, 0), 2)
+
+                titulo = "#"+set['id']+" - "+set['nomeSetor']
+                cv2.imshow(titulo, camera)
             else:
-                cv2.rectangle(camera, (x, y), (w, h), (0, 255, 0), 2)
+                if set['estado']:
+                    set['estado'] = False
+                    camerasAtivas -= 1
+                    if set['frames'] == False:
+                        print("Vídeo não encontrado.")
+                    else:
+                        print("Sinal de #"+set['id'] +
+                              " - "+set['nomeSetor']+" encerrado")
+                    if camerasAtivas == 0:
+                        print("Nenhuma câmera ativa!")
 
-        titulo = "#"+id+" - "+setor
-        cv2.imshow(titulo, camera)
-
-        # else:
-        #     print("Erro na leitura de arquivo! (Vídeo não encontrado)")
-        #     exit(0)
-    cv2.waitKey(0)
-    file.close()
-    # except:
-    #     pass
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord("q") or key == 27:  # q (quit) encerra
+            break
 
 
 def header():
     os.system('cls')
-    print("--------------- TEM VAGA ALI! ---------------")
+    print("--------------- Tem Vaga Ali! ---------------")
     print("----- Sistema de monitoramento de vagas -----\n")
 
 
