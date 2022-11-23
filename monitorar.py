@@ -131,9 +131,8 @@ def monitorar():
                     listaSaida.append(saida[f:l])
                     f += n
                     l += n
-
+                out = grid(listaSaida)
             # tela inteira dinamica exibindo todas as cameras ativas
-            out = grid(listaSaida)
             out = cv2.resize(out, (1920, 1080))
             cv2.imshow("Monitoramento", out)
 
