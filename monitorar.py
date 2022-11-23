@@ -4,6 +4,7 @@
 import cv2  # type: ignore
 import numpy as np  # type: ignore
 import funcoesComuns as func
+from datetime import datetime
 
 
 def listar(string, char1, char2):
@@ -76,22 +77,34 @@ def monitorar():
                 width = camera.shape[1]
                 cv2.rectangle(camera, (-2, -2),
                               (width-1, height-1), (0, 0, 0), 2)
+                ocupadas = 0
                 for x, y, w, h in set['coordenadas']:
                     area = dilatada[y:h, x:w]
                     pixelsBranco = cv2.countNonZero(area)
 
                     if pixelsBranco > 3000:
                         # VAGA OCUPADA
+                        ocupadas += 1
                         cv2.rectangle(camera, (x, y), (w, h), (0, 0, 255), 2)
                     else:
                         # VAGA LIVRE
                         cv2.rectangle(camera, (x, y), (w, h), (0, 255, 0), 2)
 
+                original = camera.copy()
+                # titulo do setor // faixa
                 titulo = "#"+set['id']+" "+set['nomeSetor']
                 cv2.rectangle(camera, (0, 0),
-                              (280, 70), (255, 255, 255), -1)
-                camera = cv2.putText(camera, titulo, (20, 40), cv2.FONT_HERSHEY_SIMPLEX,
-                                     1, (140, 60, 10), 2, cv2.LINE_AA)
+                              (len(titulo)*18+20, 55), (255, 255, 255), -1)
+                # titulo do setor // faixa
+                vagas = str(ocupadas)+"/"+str(len(set['coordenadas']))
+                cv2.rectangle(camera, (width-len(vagas)*18-50, 0),
+                              (width-4, 55), (255, 255, 255), -1)
+
+                # camera = cv2.addWeighted(camera, 0.9, original, 0.1, 0)
+                camera = cv2.putText(camera, titulo, (20, 35), cv2.FONT_HERSHEY_SIMPLEX,
+                                     1, (30, 15, 10), 2, cv2.LINE_AA)
+                camera = cv2.putText(camera, vagas, (width-len(vagas)*18-30, 35), cv2.FONT_HERSHEY_SIMPLEX,
+                                     1, (30, 15, 10), 2, cv2.LINE_AA)
                 # cv2.imshow(titulo, camera)
                 saida.append(camera)
             else:
@@ -134,6 +147,12 @@ def monitorar():
                 out = grid(listaSaida)
             # tela inteira dinamica exibindo todas as cameras ativas
             out = cv2.resize(out, (1920, 1080))
+            now = datetime.now()
+            data = now.strftime("%d/%m/%Y %H:%M:%S")
+            cv2.rectangle(out, (0, 1080),
+                          (330, 1010), (200, 200, 200), -1)
+            out = cv2.putText(out, data, (20, 1045), cv2.FONT_HERSHEY_SIMPLEX,
+                              0.8, (35, 35, 35), 2, cv2.LINE_AA)
             cv2.imshow("Monitoramento", out)
 
         key = cv2.waitKey(1) & 0xFF

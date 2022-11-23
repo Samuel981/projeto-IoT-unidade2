@@ -141,7 +141,7 @@ def cadastrar(args):
                        args["setor"]+';'+str(coordenadas)+'\n')
     elif key == 114 or key == 82:   # letra R repete identificacao automatica
         cv2.destroyWindow("Vagas encontradas")
-        cadastrar()
+        cadastrar(args)
     else:
         exit(0)
 
