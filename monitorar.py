@@ -23,7 +23,7 @@ def grid(lista):
     return cv2.vconcat([cv2.hconcat(im_list_h) for im_list_h in lista])
 
 
-def monitorar():
+def monitorar(args):
     setores = []
     try:
         file = open('setores.txt', 'r+')
@@ -54,8 +54,20 @@ def monitorar():
         print("Arquivo nao encontrado!")
         exit(0)
 
+    now = datetime.now()
+    data = now.strftime("%d-%m-%Y_%H-%M-%S")
+    log = None
+    if args["log"] == 1:
+        try:
+            log = open("logs/log_"+data+'.txt', 'w')
+        except:
+            pass
+            print("Impossivel criar log!")
+
     camerasAtivas = len(setores)
     while True:
+        now = datetime.now()
+        data = now.strftime("%d/%m/%Y %H:%M:%S")
         saida = []
         for set in setores:
             (set['grabbed'], set['frame']) = set['camera'].read()
@@ -106,6 +118,14 @@ def monitorar():
                 camera = cv2.putText(camera, vagas, (width-len(vagas)*18-30, 35), cv2.FONT_HERSHEY_SIMPLEX,
                                      1, (30, 15, 10), 2, cv2.LINE_AA)
                 # cv2.imshow(titulo, camera)
+
+                # adiciona dados ao registro
+                if args["log"] == 1:
+                    try:
+                        log.write("Dado\n")
+                    except:
+                        pass
+                        print("Impossivel criar log!")
                 saida.append(camera)
             else:
                 if set['estado']:
@@ -118,6 +138,8 @@ def monitorar():
                               " - "+set['nomeSetor']+" encerrado")
                     if camerasAtivas == 0:
                         print("Nenhuma câmera ativa!")
+                        if log is not None:
+                            log.close()
                         exit(0)
 
         if camerasAtivas > 0:
@@ -157,4 +179,7 @@ def monitorar():
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q") or key == 27:  # q (quit) encerra
+            cv2.destroyAllWindows()
+            if log is not None:
+                log.close()
             break

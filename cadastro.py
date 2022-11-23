@@ -149,6 +149,6 @@ def cadastrar(args):
         "Pressione\n[ENTER] para começar a monitorar "+args["setor"]+"\n[ESC] para sair")
     key = cv2.waitKey(0)
     if key == 13:
-        m.monitorar()
+        m.monitorar(args)
     else:
         exit(0)
