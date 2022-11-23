@@ -156,6 +156,8 @@ def monitorar(args):
                 # cria uma tela em branco e preenche espaços vazios com ela
                 bg = np.zeros((720, 1280, 3), dtype="uint8")
                 bg[:] = (180, 180, 180)
+                cv2.rectangle(bg, (-2, -2),
+                              (1280-1, 720-1), (0, 0, 0), 2)
                 while len(saida) < total:
                     saida.append(bg)
 
@@ -169,13 +171,16 @@ def monitorar(args):
                 out = grid(listaSaida)
             # tela inteira dinamica exibindo todas as cameras ativas
             out = cv2.resize(out, (1920, 1080))
-            now = datetime.now()
-            data = now.strftime("%d/%m/%Y %H:%M:%S")
-            cv2.rectangle(out, (0, 1080),
-                          (330, 1010), (200, 200, 200), -1)
-            out = cv2.putText(out, data, (20, 1045), cv2.FONT_HERSHEY_SIMPLEX,
-                              0.8, (35, 35, 35), 2, cv2.LINE_AA)
-            cv2.imshow("Monitoramento", out)
+
+            cv2.rectangle(out, (0, 1080), (300, 1040), (200, 200, 200), -1)
+            out = cv2.putText(out, data, (20, 1068), cv2.FONT_HERSHEY_SIMPLEX,
+                              0.7, (35, 35, 35), 2, cv2.LINE_AA)
+
+            nomeJanela = "Monitoramento"
+            cv2.namedWindow(nomeJanela, cv2.WND_PROP_FULLSCREEN)
+            cv2.setWindowProperty(
+                nomeJanela, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            cv2.imshow(nomeJanela, out)
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q") or key == 27:  # q (quit) encerra
