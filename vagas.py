@@ -246,7 +246,11 @@ def monitorar():
                         # VAGA LIVRE
                         cv2.rectangle(camera, (x, y), (w, h), (0, 255, 0), 2)
 
-                titulo = "#"+set['id']+" - "+set['nomeSetor']
+                titulo = "#"+set['id']+" "+set['nomeSetor']
+                cv2.rectangle(camera, (0, 0),
+                              (280, 70), (255, 255, 255), -1)
+                camera = cv2.putText(camera, titulo, (20, 40), cv2.FONT_HERSHEY_SIMPLEX,
+                                     1, (140, 60, 10), 2, cv2.LINE_AA)
                 # cv2.imshow(titulo, camera)
                 saida.append(camera)
             else:
@@ -260,27 +264,35 @@ def monitorar():
                               " - "+set['nomeSetor']+" encerrado")
                     if camerasAtivas == 0:
                         print("Nenhuma câmera ativa!")
+                        exit(0)
 
         if camerasAtivas > 0:
             if camerasAtivas == 1:
                 out = saida[0]
-            if camerasAtivas <= 4:
+            else:
+                n = 2
+                total = 0
+                tamanho = len(saida)
+                while tamanho > (n ** 2):
+                    n += 1
+                total = (n ** 2)
+
                 # cria uma tela em branco e preenche espaços vazios com ela
                 bg = np.zeros((720, 1280, 3), dtype="uint8")
                 bg[:] = (180, 180, 180)
-                while len(saida) < 4:
+                while len(saida) < total:
                     saida.append(bg)
 
                 listaSaida = []
                 f = 0
-                l = 2
-                for j in range(0, 2):
+                l = n
+                for j in range(0, n):
                     listaSaida.append(saida[f:l])
-                    f += 2
-                    l += 2
-                out = grid(listaSaida)
+                    f += n
+                    l += n
 
-            # tela inteira exibindo todas as cameras ativas
+            # tela inteira dinamica exibindo todas as cameras ativas
+            out = grid(listaSaida)
             out = cv2.resize(out, (1920, 1080))
             cv2.imshow("Monitoramento", out)
 
