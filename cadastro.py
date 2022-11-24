@@ -3,12 +3,24 @@ import cv2  # type: ignore
 import funcoesComuns as func
 import monitorar as m
 
-def automatica(image):
+def addFaixa(exibicao):
+    return cv2.rectangle(exibicao, (0, 0), (1280,40), (200, 200, 200), -1)
+
+def addInstrucao(imagem, texto):
+    return cv2.putText(imagem, texto, (20, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (35, 35, 35), 2, cv2.LINE_AA)
+
+def automatica(image, args):
     func.header()
     print("[Cadastrando vagas de modo semiautomático]")
     # Identificacao automatica
     # Select ROI
-    roi = cv2.selectROI("Selecione a ROI", image, False)
+    exibicao = image.copy()
+    addFaixa(exibicao)
+    exibicao = cv2.addWeighted(exibicao, 0.7, image, 0.3, 0)
+    info = "Selecione uma regiao e pressione [ENTER] para avancar"
+    exibicao = addInstrucao(exibicao, info)
+
+    roi = cv2.selectROI("Selecione a ROI", exibicao, False)
     # Crop image
     xInicial = roi[0]
     yInicial = roi[1]
@@ -46,17 +58,26 @@ def automatica(image):
 
     # cv2.imshow("Contours", output)
     cv2.destroyWindow("Selecione a ROI")
-    cv2.imshow("Vagas encontradas", outputImg)
+    exibicao = outputImg.copy()
+    addFaixa(exibicao)
+    info = "Pressione [ENTER] para confirmar cadastro de " + args["setor"] + " ou [R] para refazer o cadastro"
+    exibicao = addInstrucao(exibicao, info)
+    cv2.imshow("Vagas encontradas", exibicao)
 
     return coordenadas
 
 
-def manual(image, armazenado):
+def manual(image, armazenado, args):
     func.header()
     print("[Cadastrando vagas de modo manual]")
     coordenadas = None
     # if coordenadas is not None:
-    roi = cv2.selectROI("Selecione a ROI", image, False)
+    exibicao = image.copy()
+    addFaixa(exibicao)
+    exibicao = cv2.addWeighted(exibicao, 0.7, image, 0.3, 0)
+    info = "Selecione uma regiao e pressione [ENTER] para avancar"
+    exibicao = addInstrucao(exibicao, info)
+    roi = cv2.selectROI("Selecione a ROI", exibicao, False)
 
     xInicial = roi[0]
     yInicial = roi[1]
@@ -69,19 +90,27 @@ def manual(image, armazenado):
         armazenado = str(armazenado)
     coordenadas = armazenado + str(xInicial)+','+str(yInicial) + \
         ','+str(xInicial+largura)+','+str(yInicial+altura)+':'
-    cv2.imshow("Selecione a ROI", image)
-    print("Pressione\n[ESPAÇO] para para adicionar mais uma vaga\n[ENTER] para avançar")
+        
+    exibicao = image.copy()
+    addFaixa(exibicao)
+    info = "Pressione [ESPACO] para para adicionar mais uma vaga ou [ENTER] para avancar"
+    exibicao = addInstrucao(exibicao, info)
+    cv2.imshow("Selecione a ROI", exibicao)
     key = cv2.waitKey(0)
     if key == 32:
-        coordenadas = manual(image, coordenadas)
-    else:
-        print(coordenadas)
+        coordenadas = manual(image, coordenadas, args)
+        
+    # cv2.destroyWindow("Selecione a ROI")
+    exibicao = image.copy()
+    addFaixa(exibicao)
+    info = "Pressione [ENTER] para confirmar cadastro de " + args["setor"] + " ou [R] para refazer o cadastro"
+    exibicao = addInstrucao(exibicao, info)
+    cv2.imshow("Selecione a ROI", exibicao)
     return str(coordenadas)
 
 
 def cadastrar(args):
     func.header()
-    print("Pressione\n[A] para fazer o cadastro do modo semiautomático\n[M] para fazer o cadastro manualmente")
 
     # Leitura do primeiro frame da camera para identificacao das posicoes das vagas
     image = None
@@ -97,22 +126,30 @@ def cadastrar(args):
         exit(0)
 
     msg = "Escolher modo de identificacao"
-    cv2.imshow(msg, image)
+    
+    exibicao = image.copy()
+    addFaixa(exibicao)
+    info = "Pressione [A] para fazer o cadastro no modo semiautomatico [M] para fazer o cadastro manualmente"
+    exibicao = addInstrucao(exibicao, info)
+    
+    cv2.imshow(msg, exibicao)
     key = cv2.waitKey(0)
     coordenadas = None
     cv2.destroyWindow(msg)
     tamanhoFrame = func.getTamanhoFrame()
     image = cv2.resize(image, tamanhoFrame)
+    nomeJanela = None
     if key == 97 or key == 65:  # letra A = identificacao automatica
-        coordenadas = automatica(image)
+        nomeJanela = "Vagas encontradas"
+        coordenadas = automatica(image, args)
     elif key == 109 or key == 77:   # letra M = identificacao manual
+        nomeJanela = "Selecione a ROI"
         coord = ''
-        coordenadas = manual(image, coord)
+        coordenadas = manual(image, coord, args)
     else:
         exit(0)
 
     func.header()
-    print( "Pressione\n[ENTER] para confirmar cadastro de " + args["setor"] + "\n[R] para refazer o cadastro")
     key = cv2.waitKey(0)
     if key == 32 or key == 13:  # espaco ou enter insere dados no arquivo
         linhas = 0
@@ -127,14 +164,17 @@ def cadastrar(args):
             id = linhas+1
             file.write(str(id)+';'+args["video"]+';' +
                        args["setor"]+';'+str(coordenadas)+'\n')
-    elif key == 114 or key == 82:   # letra R repete identificacao automatica
-        cv2.destroyWindow("Vagas encontradas")
+    elif key == 114 or key == 82:   # letra R repete identificacao 
+        cv2.destroyWindow(nomeJanela)
         cadastrar(args)
     else:
         exit(0)
 
-    print(
-        "Pressione\n[ENTER] para começar a monitorar "+args["setor"]+"\n[ESC] para sair")
+    exibicao = image.copy()
+    addFaixa(exibicao)
+    info = "Pressione [ENTER] para comecar a monitorar "+args["setor"]+" ou [ESC] para sair"
+    exibicao = addInstrucao(exibicao, info)
+    cv2.imshow(nomeJanela, exibicao)
     key = cv2.waitKey(0)
     if key == 13:
         m.monitorar(args)
