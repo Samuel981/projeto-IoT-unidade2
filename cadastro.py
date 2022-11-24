@@ -142,7 +142,7 @@ def cadastrar(args):
         exit(0)
 
 
-def excluir(args):
+def excluir():
     setores = []
     try:
         with open('setores.txt', 'r') as file:
