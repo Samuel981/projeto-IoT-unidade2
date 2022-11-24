@@ -70,7 +70,9 @@ def monitorar(args):
                 camera = cv2.resize(setor['frame'], tamanhoFrame)
                 gray = cv2.cvtColor(camera, cv2.COLOR_BGR2GRAY)
 
-                thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 16)
+                ########################### AJUSTAR VALORES ###########################
+                thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 25, 16)
+                ########################### AJUSTAR VALORES ###########################
 
                 blur = cv2.medianBlur(thresh, 5)
                 kernel = np.ones((3, 3), np.int8)
@@ -85,7 +87,7 @@ def monitorar(args):
                     pixelsBranco = cv2.countNonZero(area)
 
                     areaNumerica = (h-y)*(w-x)
-                    if pixelsBranco > areaNumerica*0.095:
+                    if pixelsBranco > areaNumerica*0.12:
                         # VAGA OCUPADA
                         ocupadas += 1
                         cv2.rectangle(camera, (x, y), (w, h), (0, 0, 255), 2)
