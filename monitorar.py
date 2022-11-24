@@ -6,14 +6,11 @@ import numpy as np  # type: ignore
 import funcoesComuns as func
 from datetime import datetime
 
-
-def listar(string, char1, char2):
-
+def listarCoordenadas(string, separador1, separador2):
     lista = []
-    for vaga in string.split(char1):
-        li = list(vaga.split(char2))
-        for i in range(0, len(li)):
-            li[i] = int(li[i])
+
+    for vaga in string.split(separador1):
+        li = list(map(int, vaga.split(separador2)))
         lista.append(li)
 
     return lista
@@ -34,7 +31,7 @@ def monitorar(args):
             setor['nomeSetor'] = l.split(';')[2]
             coordenadas = l.split(';')[3]
             coordenadas = coordenadas[0:len(coordenadas)-2]
-            setor['coordenadas'] = listar(coordenadas, ':', ',')
+            setor['coordenadas'] = listarCoordenadas(coordenadas, ':', ',')
             setor['grabbed'] = True
             setor['frame'] = None
             setor['frames'] = False
