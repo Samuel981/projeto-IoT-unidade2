@@ -94,7 +94,8 @@ def monitorar(args):
                     area = dilatada[y:h, x:w]
                     pixelsBranco = cv2.countNonZero(area)
 
-                    if pixelsBranco > 3000:
+                    areaNumerica = (h-y)*(w-x)
+                    if pixelsBranco > areaNumerica*0.095:
                         # VAGA OCUPADA
                         ocupadas += 1
                         cv2.rectangle(camera, (x, y), (w, h), (0, 0, 255), 2)
@@ -106,7 +107,7 @@ def monitorar(args):
                 # titulo do setor // faixa
                 titulo = "#"+set['id']+" "+set['nomeSetor']
                 cv2.rectangle(camera, (0, 0),
-                              (len(titulo)*18+20, 55), (255, 255, 255), -1)
+                              (len(titulo)*20+20, 55), (255, 255, 255), -1)
                 # titulo do setor // faixa
                 vagas = str(ocupadas)+"/"+str(len(set['coordenadas']))
                 cv2.rectangle(camera, (width-len(vagas)*18-50, 0),

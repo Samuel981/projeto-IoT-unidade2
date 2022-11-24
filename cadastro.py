@@ -77,8 +77,8 @@ def manual(image, armazenado):
 
     if armazenado is not None:
         armazenado = str(armazenado)
-    coordenadas = armazenado + str(xInicial+20)+','+str(yInicial) + \
-        ','+str(xInicial+largura-20)+','+str(yInicial+altura)+':'
+    coordenadas = armazenado + str(xInicial)+','+str(yInicial) + \
+        ','+str(xInicial+largura)+','+str(yInicial+altura)+':'
     cv2.imshow("Selecione a ROI", image)
     print(
         "Pressione\n[ESPAÇO] para para adicionar mais uma vaga\n[ENTER] para avançar")
