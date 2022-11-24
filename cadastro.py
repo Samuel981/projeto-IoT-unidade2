@@ -1,9 +1,7 @@
 import imutils  # type: ignore
 import cv2  # type: ignore
-import numpy as np  # type: ignore
 import funcoesComuns as func
 import monitorar as m
-
 
 def automatica(image):
     func.header()
@@ -16,22 +14,16 @@ def automatica(image):
     yInicial = roi[1]
     altura = roi[3]
     largura = roi[2]
-    cropped_image = image[int(roi[1]):int(yInicial+altura),
-                          int(roi[0]):int(xInicial+largura)]
+    cropped_image = image[int(roi[1]):int(yInicial+altura), int(roi[0]):int(xInicial+largura)]
 
     # converte pra escala de cinza
     gray = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
-    # cv2.imshow("Gray", gray)
-    # cv2.waitKey(0)
 
     # threshold
     ret, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY_INV)
-    # cv2.imshow("Thresh", thresh)
-    # cv2.waitKey(0)
 
     # buscar contornos
-    contornos = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-                                 cv2.CHAIN_APPROX_SIMPLE)
+    contornos = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contornos = imutils.grab_contours(contornos)
     output = thresh.copy()
     outputImg = image.copy()
@@ -44,8 +36,7 @@ def automatica(image):
         if cv2.contourArea(contorno) > 1800:
             x, y, w, h = cv2.boundingRect(contorno)
             vagas += 1
-            cv2.rectangle(outputImg, (x+20+xInicial, y+yInicial),
-                          (x+w-20+xInicial, y+h+yInicial), (255, 0, 0), 2)
+            cv2.rectangle(outputImg, (x+20+xInicial, y+yInicial), (x+w-20+xInicial, y+h+yInicial), (255, 0, 0), 2)
             armazenado = ''
             if coordenadas is not None:
                 armazenado = str(coordenadas)
@@ -72,16 +63,14 @@ def manual(image, armazenado):
     altura = roi[3]
     largura = roi[2]
 
-    cv2.rectangle(image, (xInicial, yInicial),
-                  (xInicial+largura, yInicial+altura), (255, 0, 0), 2)
+    cv2.rectangle(image, (xInicial, yInicial), (xInicial+largura, yInicial+altura), (255, 0, 0), 2)
 
     if armazenado is not None:
         armazenado = str(armazenado)
     coordenadas = armazenado + str(xInicial)+','+str(yInicial) + \
         ','+str(xInicial+largura)+','+str(yInicial+altura)+':'
     cv2.imshow("Selecione a ROI", image)
-    print(
-        "Pressione\n[ESPAÇO] para para adicionar mais uma vaga\n[ENTER] para avançar")
+    print("Pressione\n[ESPAÇO] para para adicionar mais uma vaga\n[ENTER] para avançar")
     key = cv2.waitKey(0)
     if key == 32:
         coordenadas = manual(image, coordenadas)
@@ -92,8 +81,7 @@ def manual(image, armazenado):
 
 def cadastrar(args):
     func.header()
-    print(
-        "Pressione\n[A] para fazer o cadastro do modo semiautomático\n[M] para fazer o cadastro manualmente")
+    print("Pressione\n[A] para fazer o cadastro do modo semiautomático\n[M] para fazer o cadastro manualmente")
 
     # Leitura do primeiro frame da camera para identificacao das posicoes das vagas
     image = None
@@ -113,7 +101,8 @@ def cadastrar(args):
     key = cv2.waitKey(0)
     coordenadas = None
     cv2.destroyWindow(msg)
-    image = cv2.resize(image, (1280, 720))
+    tamanhoFrame = func.getTamanhoFrame()
+    image = cv2.resize(image, tamanhoFrame)
     if key == 97 or key == 65:  # letra A = identificacao automatica
         coordenadas = automatica(image)
     elif key == 109 or key == 77:   # letra M = identificacao manual
@@ -123,8 +112,7 @@ def cadastrar(args):
         exit(0)
 
     func.header()
-    print(
-        "Pressione\n[ENTER] para confirmar cadastro de "+args["setor"]+"\n[R] para refazer o cadastro")
+    print( "Pressione\n[ENTER] para confirmar cadastro de " + args["setor"] + "\n[R] para refazer o cadastro")
     key = cv2.waitKey(0)
     if key == 32 or key == 13:  # espaco ou enter insere dados no arquivo
         linhas = 0

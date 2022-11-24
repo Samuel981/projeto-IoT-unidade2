@@ -6,14 +6,11 @@ import numpy as np  # type: ignore
 import funcoesComuns as func
 from datetime import datetime
 
-
-def listar(string, char1, char2):
-
+def listarCoordenadas(string, separador1, separador2):
     lista = []
-    for vaga in string.split(char1):
-        li = list(vaga.split(char2))
-        for i in range(0, len(li)):
-            li[i] = int(li[i])
+
+    for vaga in string.split(separador1):
+        li = list(map(int, vaga.split(separador2)))
         lista.append(li)
 
     return lista
@@ -34,28 +31,23 @@ def monitorar(args):
             setor['nomeSetor'] = l.split(';')[2]
             coordenadas = l.split(';')[3]
             coordenadas = coordenadas[0:len(coordenadas)-2]
-            setor['coordenadas'] = listar(coordenadas, ':', ',')
+            setor['coordenadas'] = listarCoordenadas(coordenadas, ':', ',')
             setor['grabbed'] = True
             setor['frame'] = None
-            setor['frames'] = False
+            setor['isVideo'] = False
             setor['estado'] = True
             setores.append(setor)
-            # print(setor['id'])
-            # print(setor['camera'])
-            # print(setor['nomeSetor'])
-            # print(setor['coordenadas'])
 
             # Estados
-            # T - monitorando
-            # F = video nao encontrado/encerrado
+            # True = monitorando
+            # False = video nao encontrado/encerrado
         file.close()
     except:
         pass
         print("Arquivo nao encontrado!")
         exit(0)
 
-    now = datetime.now()
-    data = now.strftime("%d-%m-%Y_%H-%M-%S")
+    data = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
     log = None
     if args["log"] == 1:
         try:
@@ -66,14 +58,14 @@ def monitorar(args):
 
     camerasAtivas = len(setores)
     while True:
-        now = datetime.now()
-        data = now.strftime("%d/%m/%Y %H:%M:%S")
+        data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        tamanhoFrame = func.getTamanhoFrame()
         saida = []
-        for set in setores:
-            (set['grabbed'], set['frame']) = set['camera'].read()
-            if set['grabbed'] and set['estado']:
-                set['frames'] = True
-                camera = cv2.resize(set['frame'], (1280, 720))
+        for setor in setores:
+            (setor['grabbed'], setor['frame']) = setor['camera'].read()
+            if setor['grabbed'] and setor['estado']:
+                setor['isVideo'] = True
+                camera = cv2.resize(setor['frame'], tamanhoFrame)
                 gray = cv2.cvtColor(camera, cv2.COLOR_BGR2GRAY)
 
                 ########################### AJUSTAR VALORES ###########################
@@ -85,12 +77,11 @@ def monitorar(args):
                 kernel = np.ones((3, 3), np.int8)
                 dilatada = cv2.dilate(blur, kernel)
 
-                height = camera.shape[0]
-                width = camera.shape[1]
-                cv2.rectangle(camera, (-2, -2),
-                              (width-1, height-1), (0, 0, 0), 2)
+                height = tamanhoFrame[1]
+                width = tamanhoFrame[0]
+                cv2.rectangle(camera, (-2, -2), (width-1, height-1), (0, 0, 0), 2)
                 ocupadas = 0
-                for x, y, w, h in set['coordenadas']:
+                for x, y, w, h in setor['coordenadas']:
                     area = dilatada[y:h, x:w]
                     pixelsBranco = cv2.countNonZero(area)
 
@@ -103,17 +94,13 @@ def monitorar(args):
                         # VAGA LIVRE
                         cv2.rectangle(camera, (x, y), (w, h), (0, 255, 0), 2)
 
-                original = camera.copy()
                 # titulo do setor // faixa
-                titulo = "#"+set['id']+" "+set['nomeSetor']
-                cv2.rectangle(camera, (0, 0),
-                              (len(titulo)*20+20, 55), (255, 255, 255), -1)
+                titulo = "#"+setor['id']+" "+setor['nomeSetor']
+                cv2.rectangle(camera, (0, 0), (len(titulo)*18+20, 55), (255, 255, 255), -1)
                 # titulo do setor // faixa
-                vagas = str(ocupadas)+"/"+str(len(set['coordenadas']))
-                cv2.rectangle(camera, (width-len(vagas)*18-50, 0),
-                              (width-4, 55), (255, 255, 255), -1)
+                vagas = str(ocupadas)+"/"+str(len(setor['coordenadas']))
+                cv2.rectangle(camera, (width-len(vagas)*18-50, 0), (width-4, 55), (255, 255, 255), -1)
 
-                # camera = cv2.addWeighted(camera, 0.9, original, 0.1, 0)
                 camera = cv2.putText(camera, titulo, (20, 35), cv2.FONT_HERSHEY_SIMPLEX,
                                      1, (30, 15, 10), 2, cv2.LINE_AA)
                 camera = cv2.putText(camera, vagas, (width-len(vagas)*18-30, 35), cv2.FONT_HERSHEY_SIMPLEX,
@@ -129,14 +116,13 @@ def monitorar(args):
                         print("Impossivel criar log!")
                 saida.append(camera)
             else:
-                if set['estado']:
-                    set['estado'] = False
+                if setor['estado']:
+                    setor['estado'] = False
                     camerasAtivas -= 1
-                    if set['frames'] == False:
-                        print("Vídeo não encontrado.")
+                    if setor['isVideo'] == False:
+                        print("Imagem de vídeo não disponível.")
                     else:
-                        print("Sinal de #"+set['id'] +
-                              " - "+set['nomeSetor']+" encerrado")
+                        print("Sinal de #" + setor['id'] + " - " + setor['nomeSetor'] + " encerrado")
                     if camerasAtivas == 0:
                         print("Nenhuma câmera ativa!")
                         if log is not None:
@@ -155,10 +141,11 @@ def monitorar(args):
                 total = (n ** 2)
 
                 # cria uma tela em branco e preenche espaços vazios com ela
-                bg = np.zeros((720, 1280, 3), dtype="uint8")
+                width = tamanhoFrame[0]
+                height = tamanhoFrame[1]
+                bg = np.zeros((height, width, 3), dtype="uint8")
                 bg[:] = (180, 180, 180)
-                cv2.rectangle(bg, (-2, -2),
-                              (1280-1, 720-1), (0, 0, 0), 2)
+                cv2.rectangle(bg, (-2, -2), (1280-1, 720-1), (0, 0, 0), 2)
                 while len(saida) < total:
                     saida.append(bg)
 
@@ -174,13 +161,11 @@ def monitorar(args):
             out = cv2.resize(out, (1920, 1080))
 
             cv2.rectangle(out, (0, 1080), (300, 1040), (200, 200, 200), -1)
-            out = cv2.putText(out, data, (20, 1068), cv2.FONT_HERSHEY_SIMPLEX,
-                              0.7, (35, 35, 35), 2, cv2.LINE_AA)
+            out = cv2.putText(out, data, (20, 1068), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (35, 35, 35), 2, cv2.LINE_AA)
 
             nomeJanela = "Monitoramento"
             cv2.namedWindow(nomeJanela, cv2.WND_PROP_FULLSCREEN)
-            cv2.setWindowProperty(
-                nomeJanela, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            cv2.setWindowProperty(nomeJanela, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
             cv2.imshow(nomeJanela, out)
 
         key = cv2.waitKey(1) & 0xFF
