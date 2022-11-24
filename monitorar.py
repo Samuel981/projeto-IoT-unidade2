@@ -47,7 +47,7 @@ def monitorar(args):
         print("Arquivo nao encontrado!")
         exit(0)
 
-    data = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+    data = datetime.now().strftime("%d-%m-%Y")
     log = None
     if args["log"] == 1:
         try:
@@ -57,6 +57,8 @@ def monitorar(args):
             print("Impossivel criar log!")
 
     camerasAtivas = len(setores)
+    prevOcupadas = 0
+    i = 0
     while True:
         data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         tamanhoFrame = func.getTamanhoFrame()
@@ -96,7 +98,7 @@ def monitorar(args):
                 # titulo do setor // faixa
                 titulo = "#"+setor['id']+" "+setor['nomeSetor']
                 cv2.rectangle(camera, (0, 0), (len(titulo)*18+20, 55), (255, 255, 255), -1)
-                # titulo do setor // faixa
+                # numero de vagas ocupadas
                 vagas = str(ocupadas)+"/"+str(len(setor['coordenadas']))
                 cv2.rectangle(camera, (width-len(vagas)*18-50, 0), (width-4, 55), (255, 255, 255), -1)
 
@@ -107,13 +109,28 @@ def monitorar(args):
                 # cv2.imshow(titulo, camera)
 
                 # adiciona dados ao registro
-                if args["log"] == 1:
-                    try:
-                        log.write("Dado\n")
-                    except:
-                        pass
-                        print("Impossivel criar log!")
+                if args["log"] is 1:
+                    if prevOcupadas is not ocupadas and ocupadas is not 0 and i is not 0:
+                        veiculos = abs(ocupadas - prevOcupadas)
+                        acao = ''
+                        if prevOcupadas > ocupadas:
+                            if veiculos is 1:
+                                acao = '1 veiculo saiu do setor'
+                            else:
+                                acao = str(veiculos) + ' veiculos sairam do setor'
+                        else:
+                            if veiculos is 1:
+                                acao = '1 veiculo entrou no setor' 
+                            else:
+                                acao = str(veiculos) + ' veiculos entraram no setor'
+                        try:
+                            log.write(acao + ' ' + setor['nomeSetor'] + " em " + data + " - [" + vagas + "]\n")
+                        except:
+                            pass
+                            print("Erro: Não foi possível criar log.")
                 saida.append(camera)
+                prevOcupadas = ocupadas
+                i += 1
             else:
                 if setor['estado']:
                     setor['estado'] = False
