@@ -140,3 +140,38 @@ def cadastrar(args):
         m.monitorar(args)
     else:
         exit(0)
+
+
+def excluir(args):
+    setores = []
+    try:
+        with open('setores.txt', 'r') as file:
+            print("Lista de setores:")
+            linhas = 0
+            for l in file:
+                print(l.split(';')[0]+" - "+l.split(';')[1])
+                linhas += 1
+            setor = int(input("Informe a id do setor a ser excluído: "))
+            file.close()
+    except:
+        pass
+        print("Arquivo nao encontrado!")
+        exit(0)
+
+    with open('setores.txt', 'r') as file:
+        lines = file.readlines()
+        ptr = 1
+
+        if setor > linhas:
+            print("Setor não encontrado")
+            exit(0)
+        with open('setores.txt', 'w') as fw:
+            for line in lines:
+                if ptr < setor:
+                    fw.write(line)
+                if ptr > setor:
+                    corrigido = int(line.split(';')[0])-1
+                    fw.write(str(corrigido)+";"+line.split(';')
+                             [1]+";"+line.split(';')[2]+";"+line.split(';')[3])
+                ptr += 1
+            print("Deletado")
