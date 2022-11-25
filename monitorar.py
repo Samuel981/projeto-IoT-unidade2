@@ -5,6 +5,11 @@ import cv2  # type: ignore
 import numpy as np  # type: ignore
 import funcoesComuns as func
 from datetime import datetime
+from Adafruit_IO import Client # type: ignore
+
+key = 'aio_dLWr11wCYNDSOqp1turfcWH9eqPU'
+username = 'fabianaduarte'
+clientREST = Client(username=username, key=key)
 
 def listarCoordenadas(string, separador1, separador2):
     lista = []
@@ -36,6 +41,7 @@ def monitorar(args):
             setor['frame'] = None
             setor['isVideo'] = False
             setor['estado'] = True
+            setor['vagasOcupadas'] = 0
             setores.append(setor)
 
             # Estados
@@ -57,8 +63,6 @@ def monitorar(args):
             print("Impossivel criar log!")
 
     camerasAtivas = len(setores)
-    prevOcupadas = 0
-    i = 0
     while True:
         data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         tamanhoFrame = func.getTamanhoFrame()
@@ -70,9 +74,7 @@ def monitorar(args):
                 camera = cv2.resize(setor['frame'], tamanhoFrame)
                 gray = cv2.cvtColor(camera, cv2.COLOR_BGR2GRAY)
 
-                ########################### AJUSTAR VALORES ###########################
                 thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 25, 16)
-                ########################### AJUSTAR VALORES ###########################
 
                 blur = cv2.medianBlur(thresh, 5)
                 kernel = np.ones((3, 3), np.int8)
@@ -110,10 +112,11 @@ def monitorar(args):
 
                 # adiciona dados ao registro
                 if args["log"] is 1:
-                    if prevOcupadas is not ocupadas and ocupadas is not 0 and i is not 0:
-                        veiculos = abs(ocupadas - prevOcupadas)
+                    veiculos = abs(ocupadas - setor['vagasOcupadas'])
+                    
+                    if veiculos is not 0:
                         acao = ''
-                        if prevOcupadas > ocupadas:
+                        if setor['vagasOcupadas'] > ocupadas:
                             if veiculos is 1:
                                 acao = '1 veiculo saiu do setor'
                             else:
@@ -123,14 +126,14 @@ def monitorar(args):
                                 acao = '1 veiculo entrou no setor' 
                             else:
                                 acao = str(veiculos) + ' veiculos entraram no setor'
+                        setor['vagasOcupadas'] = ocupadas
                         try:
                             log.write(acao + ' ' + setor['nomeSetor'] + " em " + data + " - [" + vagas + "]\n")
+                            clientREST.send('projeto-unidade-2.' + setor['nomeSetor'], vagas)
                         except:
                             pass
                             print("Erro: Não foi possível criar log.")
                 saida.append(camera)
-                prevOcupadas = ocupadas
-                i += 1
             else:
                 if setor['estado']:
                     setor['estado'] = False
