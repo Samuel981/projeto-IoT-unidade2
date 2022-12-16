@@ -4,12 +4,11 @@
 import cv2  # type: ignore
 import numpy as np  # type: ignore
 import funcoesComuns as func
+import access
 from datetime import datetime
 from Adafruit_IO import Client # type: ignore
 
-key = 'aio_dLWr11wCYNDSOqp1turfcWH9eqPU'
-username = 'fabianaduarte'
-clientREST = Client(username=username, key=key)
+clientREST = Client(username=access.USERNAME, key=access.KEY)
 
 def listarCoordenadas(string, separador1, separador2):
     lista = []
